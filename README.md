@@ -180,18 +180,40 @@ inline.
    TOOL_MAP["my_tool"] = my_tool.my_tool
    ```
 
-## Deploy online (claude.ai-like)
+## Deploy to Streamlit Cloud
 
-[Streamlit Community Cloud](https://share.streamlit.io) is the easy path:
+1. Push your repo to GitHub (already done).
+2. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
+3. Click **New app → Deploy from GitHub**.
+4. Fill in:
+   - Repository: `EiriniOr/Cassandra`
+   - Branch: `main`
+   - Main file path: `app.py`
+5. Click **Advanced settings**. In the **Secrets** box paste this TOML (Streamlit Cloud uses TOML for secrets, not `.env`):
 
-1. Connect this repo
-2. Set `ANTHROPIC_API_KEY` under **Settings → Secrets**
-3. Deploy
+   ```toml
+   ANTHROPIC_API_KEY = "sk-ant-..."
+   CASSANDRA_USER = "your_username"
+   CASSANDRA_PASS = "your_password"
+   ```
 
-⚠️ Most local tools won't work on Streamlit Cloud — `clipboard`, `macos_notify`,
-`shell_exec`, `project_picker`, `git_*`, `file_*`, and the memory wiki all
-assume your local filesystem. The hosted version is good for chat + web tools;
-run locally for the full toolkit.
+6. Click **Deploy**. After ~1 min you get a URL like `https://cassandra-xxx.streamlit.app`.
+
+The app reads secrets via `st.secrets` (cloud) and falls back to `os.getenv` (local `.env`), so the same code works in both places.
+
+### To rotate secrets
+
+Streamlit dashboard → your app → **⋮ menu → Settings → Secrets** → edit TOML → save. The app reboots automatically.
+
+### What works on Streamlit Cloud vs local
+
+| | Cloud | Local |
+|---|---|---|
+| Chat, web_search, web_fetch, calculate, tarot, arxiv_search, hn_top | ✅ | ✅ |
+| save_article, brain_dump, decisions, memory wiki | ⚠️ ephemeral — wiped on container restart | ✅ persists in `~/cassandra-memory/` |
+| file_*, git_*, project_picker, shell_exec, clipboard_*, macos_notify, pomodoro | ❌ no access to your local machine | ✅ |
+
+For real personal-assistant use (memory that persists, access to your files, repos, clipboard) — run locally with `streamlit run app.py`. The Cloud deploy is best as a shareable demo or for chat + web-only tasks.
 
 ## Project Structure
 
