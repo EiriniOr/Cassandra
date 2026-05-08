@@ -26,7 +26,13 @@ Both must be set or the app refuses to load. The CLI (`main.py`) is unauthentica
 
 ## Usage
 
-**Web chat** (browser, streaming, auth-gated):
+**One-click launch** (after first-time setup below):
+
+Double-click `launch.command` in Finder. It activates a venv if present, installs deps if missing, and starts the Streamlit server. Browser opens automatically. Login form gates the chat — you'll need your `CASSANDRA_USER` / `CASSANDRA_PASS`.
+
+To put it on your dock or desktop: drag `launch.command` to either, or right-click → Make Alias.
+
+**From the terminal** (browser, streaming, auth-gated):
 
 ```bash
 streamlit run app.py

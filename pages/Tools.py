@@ -13,30 +13,98 @@ st.set_page_config(
 
 st.markdown(
     """
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
 <style>
+    :root {
+        --violet: #a78bfa;
+        --violet-line: rgba(167, 139, 250, 0.18);
+        --gold: #d4b15c;
+        --text: #ece9f5;
+        --muted: #9b97b8;
+    }
     #MainMenu, footer, header { visibility: hidden; }
-    .main .block-container { max-width: 1100px; padding-top: 1.5rem; }
-    [data-testid="stSidebar"] { background: rgba(0,0,0,0.15); }
+    [data-testid="stStatusWidget"] { display: none; }
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    }
+    .main .block-container { max-width: 1100px; padding-top: 1.5rem; padding-bottom: 4rem; }
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, rgba(167,139,250,0.06) 0%, rgba(0,0,0,0.2) 100%);
+        border-right: 1px solid var(--violet-line);
+    }
+    [data-testid="stSidebar"] h3 {
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 500;
+    }
+    .page-title {
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 400;
+        font-size: 2.6rem;
+        letter-spacing: -0.01em;
+        background: linear-gradient(135deg, #ece9f5 30%, var(--violet) 70%, var(--gold) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0 0 0.4rem 0;
+    }
+    .page-sub {
+        color: var(--muted);
+        font-size: 0.95rem;
+        max-width: 720px;
+        line-height: 1.6;
+        margin-bottom: 0.4rem;
+    }
+    .category-header {
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 500;
+        font-size: 1.4rem;
+        margin: 1.8rem 0 0.3rem 0;
+    }
+    .category-blurb {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        max-width: 760px;
+        line-height: 1.55;
+    }
     .tool-card {
-        border: 1px solid rgba(125,125,125,0.18);
-        border-radius: 10px;
-        padding: 0.9rem 1rem;
-        margin-bottom: 0.6rem;
-        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--violet-line);
+        border-radius: 12px;
+        padding: 1rem 1.1rem;
+        margin-bottom: 0.7rem;
+        background: rgba(167, 139, 250, 0.04);
         height: 100%;
+        transition: all 0.18s ease;
+    }
+    .tool-card:hover {
+        border-color: var(--violet);
+        background: rgba(167, 139, 250, 0.09);
+        transform: translateY(-1px);
     }
     .tool-name {
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-family: 'JetBrains Mono', SFMono-Regular, monospace;
         font-weight: 600;
         font-size: 0.95rem;
+        color: var(--gold);
     }
-    .tool-desc { opacity: 0.85; font-size: 0.92rem; margin: 0.4rem 0 0.6rem 0; }
+    .tool-desc {
+        color: var(--text);
+        opacity: 0.92;
+        font-size: 0.92rem;
+        margin: 0.5rem 0 0.7rem 0;
+        line-height: 1.55;
+    }
     .tool-example {
-        font-size: 0.85rem;
-        opacity: 0.7;
+        font-family: 'Fraunces', Georgia, serif;
         font-style: italic;
-        border-left: 2px solid rgba(125,125,125,0.4);
-        padding-left: 0.6rem;
+        font-size: 0.88rem;
+        color: var(--muted);
+        border-left: 2px solid var(--violet);
+        padding-left: 0.7rem;
+        line-height: 1.5;
     }
 </style>
 """,
@@ -45,7 +113,7 @@ st.markdown(
 
 
 with st.sidebar:
-    st.markdown("### 🔮 Cassandra")
+    st.markdown("### ✦ Cassandra")
     st.caption(f"`{MODEL}`")
     st.divider()
     st.caption("📁 Memory: `~/cassandra-memory/`")
@@ -255,21 +323,27 @@ CATALOG = [
 ]
 
 
-st.title("🛠 Tools")
-st.caption(
-    "Cassandra picks tools based on what you ask. You don't call them directly — "
-    "you just chat. The examples below are sample prompts that tend to trigger each tool."
-)
-
 total = sum(len(tools) for _, _, tools in CATALOG)
-st.caption(f"**{total} tools** across {len(CATALOG)} categories.")
+st.markdown(
+    f"""
+<h1 class='page-title'>Tools</h1>
+<div class='page-sub'>
+    Cassandra picks tools based on what you ask — you don't call them directly, you just chat.
+    The examples below are prompts that tend to trigger each tool.
+</div>
+<div class='page-sub' style='opacity:0.6;'><b>{total} tools</b> · {len(CATALOG)} categories</div>
+""",
+    unsafe_allow_html=True,
+)
 st.divider()
 
 
 for header, blurb, tools in CATALOG:
-    st.markdown(f"### {header}")
+    st.markdown(f"<div class='category-header'>{header}</div>", unsafe_allow_html=True)
     if blurb:
-        st.caption(blurb)
+        st.markdown(
+            f"<div class='category-blurb'>{blurb}</div>", unsafe_allow_html=True
+        )
     cols = st.columns(2)
     for i, (name, desc, example) in enumerate(tools):
         with cols[i % 2]:
