@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from shared import MODEL, render_signout_button, require_auth
+from shared import MODEL
 
 st.set_page_config(
     page_title="Cassandra · Tools",
@@ -10,8 +10,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-require_auth()
 
 st.markdown(
     """
@@ -52,8 +50,6 @@ with st.sidebar:
     st.divider()
     st.caption("📁 Memory: `~/cassandra-memory/`")
     st.caption("🔗 [GitHub](https://github.com/EiriniOr/Cassandra)")
-    st.divider()
-    render_signout_button()
 
 
 # (category_emoji+label, blurb, [(name, description, example_prompt), ...])
