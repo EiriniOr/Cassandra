@@ -296,7 +296,7 @@ SUGGESTIONS = [
 
 
 def render_message(msg: dict):
-    avatar = "✦" if msg["role"] == "assistant" else None
+    avatar = "🔮" if msg["role"] == "assistant" else None
     with st.chat_message(msg["role"], avatar=avatar):
         for tool in msg.get("tool_calls", []):
             with st.expander(f"🛠  `{tool['name']}`", expanded=False):
@@ -352,7 +352,7 @@ if prompt:
     api_msgs = list(st.session_state.api_messages)
     tool_calls_for_msg = []
 
-    with st.chat_message("assistant", avatar="✦"):
+    with st.chat_message("assistant", avatar="🔮"):
         full_text = ""
         text_placeholder = st.empty()
 
