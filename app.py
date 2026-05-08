@@ -2,36 +2,9 @@ import json
 
 import anthropic
 import streamlit as st
-from dotenv import load_dotenv
 
+from shared import MODEL, SYSTEM, render_signout_button, require_auth
 from tools import TOOL_MAP, TOOLS
-
-load_dotenv()
-
-MODEL = "claude-opus-4-7"
-
-SYSTEM = """You are Cassandra, a personal AI agent for Eirini. You have access to:
-
-- Web search and fetch (Anthropic-hosted)
-- A persistent memory wiki at ~/cassandra-memory/ following Karpathy's LLM Wiki
-  pattern. Read ~/cassandra-memory/CLAUDE.md to learn the schema. When the user
-  asks about prior context, search memory FIRST. When they share something
-  worth remembering, ingest it: write a source page, update entities/concepts,
-  append to log.md.
-- File read/write (general filesystem)
-- Calculator, clipboard, macOS notifications
-- Project picker (scans ~/ for git repos)
-- Decision journal, brain dump inbox
-- Shell execution (TWO-STEP — always show command first, get user yes, then
-  call again with confirm=true)
-- Git inspector (status, log, diff)
-- Pomodoro time tracker
-- Knowledge fetchers: arXiv, Hacker News, save_article (drops sources into
-  the memory raw/ dir for later wiki ingestion)
-- Tarot draw (for fun)
-
-Be concise. Use tools when they actually help."""
-
 
 st.set_page_config(
     page_title="Cassandra",
@@ -39,6 +12,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+require_auth()
 
 
 st.markdown(
@@ -133,6 +108,9 @@ with st.sidebar:
     st.divider()
     st.caption("📁 Memory: `~/cassandra-memory/`")
     st.caption("🔗 [GitHub](https://github.com/EiriniOr/Cassandra)")
+
+    st.divider()
+    render_signout_button()
 
 
 SUGGESTIONS = [

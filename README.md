@@ -10,16 +10,34 @@ streaming Streamlit web chat. Maintains a persistent memory wiki following
 git clone https://github.com/EiriniOr/Cassandra.git
 cd Cassandra
 pip install -r requirements.txt
-cp .env.example .env        # add ANTHROPIC_API_KEY
+cp .env.example .env        # add ANTHROPIC_API_KEY, CASSANDRA_USER, CASSANDRA_PASS
 ```
+
+### Auth
+
+The web chat is gated by a username + password from your `.env`:
+
+```
+CASSANDRA_USER=eirini
+CASSANDRA_PASS=something-only-you-know
+```
+
+Both must be set or the app refuses to load. The CLI (`main.py`) is unauthenticated — it's local-only and uses your Anthropic key directly. This is plain-text comparison, not crypto-grade auth — fine for keeping casual visitors out of a deployed instance, not for guarding secrets.
 
 ## Usage
 
-**Web chat** (browser, streaming):
+**Web chat** (browser, streaming, auth-gated):
 
 ```bash
 streamlit run app.py
 ```
+
+The app is two pages:
+
+- **Cassandra** (default) — chat
+- **Tools** — reference for every tool: what it does, sample prompt that triggers it. Generated from the registry.
+
+Use the left sidebar to switch.
 
 **CLI**:
 
@@ -180,7 +198,10 @@ run locally for the full toolkit.
 ```
 Cassandra/
 ├── main.py              # CLI agent loop
-├── app.py               # Streamlit web chat
+├── app.py               # Streamlit web chat (auth-gated)
+├── shared.py            # auth + system prompt shared across pages
+├── pages/
+│   └── Tools.py         # Tool reference page (auth-gated)
 ├── tools/
 │   ├── __init__.py      # Registry: TOOLS + TOOL_MAP
 │   ├── calculator.py
