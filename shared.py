@@ -7,6 +7,21 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def get_secret(key: str) -> str | None:
+    """Streamlit Cloud secrets first, then local env / .env."""
+    try:
+        return st.secrets[key]
+    except Exception:
+        return os.getenv(key)
+
+
+# Make the Anthropic key visible to anthropic.Anthropic() (which reads from env).
+_api_key = get_secret("ANTHROPIC_API_KEY")
+if _api_key:
+    os.environ["ANTHROPIC_API_KEY"] = _api_key
+
+
 MODEL = "claude-opus-4-7"
 
 SYSTEM = """You are Cassandra, a personal AI agent for Eirini. You have access to:
@@ -37,13 +52,13 @@ def require_auth():
     if st.session_state.get("authed"):
         return
 
-    expected_user = os.getenv("CASSANDRA_USER")
-    expected_pass = os.getenv("CASSANDRA_PASS")
+    expected_user = get_secret("CASSANDRA_USER")
+    expected_pass = get_secret("CASSANDRA_PASS")
 
     if not expected_user or not expected_pass:
         st.error(
-            "Auth not configured. Set `CASSANDRA_USER` and `CASSANDRA_PASS` in `.env` "
-            "(see `.env.example`)."
+            "Auth not configured. Set `CASSANDRA_USER` and `CASSANDRA_PASS` in "
+            "`.env` (local) or Streamlit Cloud Secrets (deployed)."
         )
         st.stop()
 
