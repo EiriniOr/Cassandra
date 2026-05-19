@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cassandra</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="brand">
+            <span class="brand-mark">✦</span>
+            <span class="brand-name">Cassandra</span>
+        </div>
+        <button id="new-chat" class="sidebar-btn primary">
+            <span>✨</span><span>New chat</span>
+        </button>
+
+        <nav class="sidebar-nav">
+            <a href="/" class="active">💬  Chat</a>
+            <a href="/tools">🛠  Tools</a>
+        </nav>
+
+        <div class="sidebar-meta">
+            <div class="meta-row"><span class="muted">Model</span><code>claude-opus-4-7</code></div>
+            <div class="meta-row"><span class="muted">Tools</span><span id="tool-count">…</span></div>
+            <div class="meta-row"><span class="muted">Memory</span><code>~/cassandra-memory/</code></div>
+        </div>
+
+        <div class="sidebar-foot">
+            <a href="https://github.com/EiriniOr/Cassandra" target="_blank" rel="noreferrer">GitHub ↗</a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div id="messages" class="messages"></div>
+
+        <section id="welcome" class="welcome">
+            <div class="welcome-mark">✦</div>
+            <h1 class="welcome-title">Cassandra</h1>
+            <p class="welcome-tagline">An oracle with thirty hands.</p>
+            <p class="welcome-meta">Personal AI agent · persistent memory · 30 tools</p>
+
+            <div class="suggestions">
+                <button class="suggestion" data-prompt="What's been on Hacker News today, and any new arXiv papers on agentic LLMs?">
+                    <div class="sug-icon">📚</div>
+                    <div class="sug-label">Catch me up</div>
+                    <div class="sug-sub">Latest from arXiv and HN</div>
+                </button>
+                <button class="suggestion" data-prompt="Use project_picker to scan my repos. Suggest what to focus on next.">
+                    <div class="sug-icon">🗂️</div>
+                    <div class="sug-label">What should I work on?</div>
+                    <div class="sug-sub">Scan my repos and suggest</div>
+                </button>
+                <button class="suggestion" data-prompt="List what's in my memory wiki and summarize what I have so far.">
+                    <div class="sug-icon">🧠</div>
+                    <div class="sug-label">Survey my memory</div>
+                    <div class="sug-sub">What's in the wiki so far</div>
+                </button>
+                <button class="suggestion" data-prompt="Draw three tarot cards for the week ahead.">
+                    <div class="sug-icon">🔮</div>
+                    <div class="sug-label">Read my week</div>
+                    <div class="sug-sub">Three-card tarot spread</div>
+                </button>
+            </div>
+        </section>
+
+        <form id="composer" class="composer">
+            <textarea
+                id="input"
+                placeholder="Message Cassandra…"
+                rows="1"
+                autocomplete="off"
+                autofocus
+            ></textarea>
+            <button type="submit" id="send" aria-label="Send">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="19" x2="12" y2="5"/>
+                    <polyline points="5 12 12 5 19 12"/>
+                </svg>
+            </button>
+        </form>
+    </main>
+
+    <script src="/static/chat.js" defer></script>
+</body>
+</html>
