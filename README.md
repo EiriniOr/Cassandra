@@ -1,123 +1,89 @@
 # Cassandra
 
-A personal AI agent on Claude Opus 4.7 with **30 tools** and a persistent memory wiki ([Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)). Runs locally — FastAPI backend + a custom web UI.
+Open-domain research assistant. Search scientific literature (OpenAlex + arXiv),
+read results as progressive-disclosure cards — one-sentence fact → grounded
+paragraph → real open-access PDF — save articles and track topics across
+visits, and get a standing library refresh every ~2 days. Password-gated,
+hosted on Vercel.
+
+Built on CopilotKit + Next.js App Router, reusing the literature-search /
+full-text / citation logic from the DASH project (`eirini-dash`), ported to
+TypeScript and generalized from a fixed climate/planning corpus to open-topic
+live search.
 
 ## Setup
 
 ```bash
 git clone https://github.com/EiriniOr/Cassandra.git
 cd Cassandra
-pip install -r requirements.txt
-cp .env.example .env       # then put your ANTHROPIC_API_KEY in .env
+npm install
+cp .env.example .env   # fill in ANTHROPIC_API_KEY, SITE_PASSWORD, AUTH_SECRET
+npm run dev
 ```
 
-## Run
+Open <http://localhost:3000>, log in with `SITE_PASSWORD`.
 
-**One-click:** double-click `launch.command` in Finder, or the `Cassandra.command` shortcut on your desktop. Auto-installs deps if needed, starts the server, opens the browser.
+Library persistence (saved articles, tracked topics) and the refresh cron
+need Upstash Redis (Vercel's current marketplace KV product — connect it from
+the Vercel project's Storage tab, or `vercel install upstash` locally). Without
+it, chat and search still work; the library API routes return errors.
 
-**From the terminal:**
+## Environment variables
 
-```bash
-python server.py
-```
-
-Then open <http://localhost:8000>. Server binds to `127.0.0.1` only — not accessible from other machines on your network.
-
-**CLI** (no browser, terminal only):
-
-```bash
-python main.py
-```
-
-The memory wiki at `~/cassandra-memory/` auto-creates on first use.
-
-## Tools
-
-Cassandra picks tools based on what you ask — you don't call them directly. The `/tools` page in the app documents all 30 with sample prompts. Quick overview:
-
-| Group | Tools |
+| Var | Purpose |
 |---|---|
-| **Web** | `web_search`, `web_fetch` (Anthropic-hosted) |
-| **Memory wiki** | `memory_read`, `memory_write`, `memory_list`, `memory_search`, `memory_log` — second brain at `~/cassandra-memory/` |
-| **Knowledge** | `arxiv_search`, `hn_top`, `save_article` (drops sources into wiki `raw/`) |
-| **Files & shell** | `file_read`, `file_write`, `file_list`, `shell_exec` (two-step confirm), `git_status`, `git_log`, `git_diff`, `project_picker` |
-| **Capture** | `brain_dump`, `inbox_read`, `log_decision`, `recall_decisions` |
-| **Time** | `pomodoro_start`, `pomodoro_stop`, `pomodoro_summary` |
-| **macOS** | `clipboard_read`, `clipboard_write`, `macos_notify` |
-| **Misc** | `calculate`, `tarot_draw` |
+| `ANTHROPIC_API_KEY` | Claude API key |
+| `SITE_PASSWORD` | Password gate for the whole site |
+| `AUTH_SECRET` | Signs the session cookie (`openssl rand -hex 32`) |
+| `CRON_SECRET` | Verifies Vercel Cron's calls to `/api/cron/refresh` |
+| `CASSANDRA_MODEL` | Optional, overrides the default chat model (`claude-fable-5`) |
+| `CASSANDRA_FAST_MODEL` | Optional, overrides the summarizer model (`claude-haiku-4-5`) |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Set automatically by the Vercel Upstash integration |
 
 ## Architecture
 
 ```
-Browser  ──(SSE stream)──>  FastAPI (server.py)
-                                │
-                                ├── Anthropic SDK  →  Claude Opus 4.7
-                                └── tools/  →  TOOL_MAP[name](**input)
+Browser ──> middleware.ts (password gate, sets cassandra_uid cookie)
+              │
+              ├─ /                    chat UI (CopilotKit)
+              │     └─ /api/copilotkit   CopilotRuntime + AnthropicAdapter → Claude
+              │           search_literature tool (frontend) ──> /api/research/search
+              │                                                     │
+              │                                              lib/research/*.ts
+              │                                          (search, fulltext, summarize)
+              │
+              ├─ /library             saved articles + tracked topics
+              │     └─ /api/library/*     lib/library.ts (Upstash Redis)
+              │
+              └─ /api/cron/refresh    Vercel Cron, every 2 days
+                    re-runs lib/research/search.ts per tracked topic,
+                    appends new results via lib/library.ts
 ```
 
-- `server.py` — FastAPI app, `/api/chat` endpoint streams Server-Sent Events
-- `static/` — handwritten HTML/CSS/JS (no framework)
-- `tools/` — one module per tool, registered in `tools/__init__.py`
-- `shared.py` — system prompt + model id (imported by `server.py` and `main.py`)
+- `middleware.ts` — password gate (signed `cassandra_auth` cookie) and the
+  opaque `cassandra_uid` cookie that scopes the library.
+- `app/api/copilotkit/route.ts` — CopilotKit runtime, `AnthropicAdapter` talks
+  to Claude directly (no separate agent backend needed for a stateless
+  live-search tool, unlike DASH's LangGraph setup).
+- `lib/research/search.ts` / `fulltext.ts` / `citations.ts` — TS ports of
+  DASH's `scientific_search.py` / `fulltext.py` / `citations.py`: OpenAlex +
+  arXiv search, open-access PDF resolution + text extraction (`unpdf`), and
+  citation formatting. Framework-free, same separation DASH used.
+- `lib/research/summarize.ts` — one Claude call per result producing the
+  one-sentence + paragraph pair, grounded in real article text when an OA PDF
+  is found.
+- `components/ArticleCard.tsx` / `ArticleGrid.tsx` — the progressive-disclosure
+  UI: a zoom control cycles sentence → paragraph → embedded PDF (only when a
+  real OA PDF was resolved — never fabricated).
+- `lib/library.ts` — Upstash-Redis-backed library (saved articles, tracked
+  topics, cron-discovered new finds), keyed by `cassandra_uid`.
+- `app/api/cron/refresh/route.ts` + `vercel.json` — the standing job: re-runs
+  tracked-topic searches and appends unseen results; its scheduled invocation
+  also keeps the deployment warm.
 
-## Adding a tool
+## Adding a research tool
 
-1. Create `tools/my_tool.py`:
-
-   ```python
-   def my_tool(arg: str) -> str:
-       return f"got {arg}"
-
-   SCHEMA = {
-       "name": "my_tool",
-       "description": "What it does and when to use it.",
-       "input_schema": {
-           "type": "object",
-           "properties": {"arg": {"type": "string"}},
-           "required": ["arg"],
-       },
-   }
-   ```
-
-2. Register in `tools/__init__.py`:
-
-   ```python
-   from tools import my_tool
-   CUSTOM_SCHEMAS.append(my_tool.SCHEMA)
-   TOOL_MAP["my_tool"] = my_tool.my_tool
-   ```
-
-3. Update the Tools reference page (`static/tools.html`) so the UI shows it.
-
-## Project structure
-
-```
-Cassandra/
-├── server.py            # FastAPI backend (SSE chat endpoint)
-├── main.py              # CLI agent loop
-├── shared.py            # SYSTEM prompt + MODEL constants
-├── launch.command       # double-click launcher (macOS)
-├── static/
-│   ├── index.html       # chat UI
-│   ├── tools.html       # tools reference
-│   ├── style.css        # all styles (dark + violet/gold)
-│   └── chat.js          # streaming chat client
-├── tools/               # 28 custom tools + registry
-│   ├── __init__.py
-│   ├── calculator.py
-│   ├── clipboard.py
-│   ├── decisions.py
-│   ├── files.py
-│   ├── git_tools.py
-│   ├── inbox.py
-│   ├── knowledge.py
-│   ├── memory.py
-│   ├── notify.py
-│   ├── pomodoro.py
-│   ├── projects.py
-│   ├── shell.py
-│   └── tarot.py
-├── requirements.txt
-├── .env.example
-└── .gitignore
-```
+Add a new module under `lib/research/`, export plain async functions (no
+framework imports), then wire it as a `useFrontendTool` in
+`app/(app)/page.tsx` if it needs to render custom UI, or call it directly from
+an API route otherwise.
