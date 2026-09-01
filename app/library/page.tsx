@@ -9,8 +9,12 @@ export default function LibraryPage() {
   const [library, setLibrary] = useState<Library | null>(null);
 
   async function load() {
-    const res = await fetch("/api/library");
-    if (res.ok) setLibrary(await res.json());
+    try {
+      const res = await fetch("/api/library");
+      if (res.ok) setLibrary(await res.json());
+    } catch {
+      // library not configured yet (e.g. Upstash not connected)
+    }
   }
 
   useEffect(() => {
@@ -18,29 +22,41 @@ export default function LibraryPage() {
   }, []);
 
   async function untrack(query: string) {
-    await fetch("/api/library/track", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query }),
-    });
+    try {
+      await fetch("/api/library/track", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+    } catch {
+      // ignore
+    }
     load();
   }
 
   async function saveFind(article: SavedArticle) {
-    await fetch("/api/library/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(article),
-    });
+    try {
+      await fetch("/api/library/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(article),
+      });
+    } catch {
+      // ignore
+    }
     load();
   }
 
   async function dismissFind(article: SavedArticle) {
-    await fetch("/api/library/newfinds", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ doi: article.doi, title: article.title }),
-    });
+    try {
+      await fetch("/api/library/newfinds", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ doi: article.doi, title: article.title }),
+      });
+    } catch {
+      // ignore
+    }
     load();
   }
 

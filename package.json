@@ -10,9 +10,6 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.57.0",
-    "@copilotkit/react-core": "1.61.1",
-    "@copilotkit/react-ui": "1.61.1",
-    "@copilotkit/runtime": "1.61.1",
     "@upstash/redis": "^1.38.2",
     "fast-xml-parser": "^5.11.0",
     "framer-motion": "^13.1.0",
