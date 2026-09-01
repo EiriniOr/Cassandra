@@ -10,7 +10,7 @@ const client = new Anthropic();
 const SEARCH_TOOL: Anthropic.Tool = {
   name: "search_literature",
   description:
-    "Search scientific literature (OpenAlex + arXiv) for a research topic. Always use this when the user wants sources, papers, or evidence — never invent citations yourself.",
+    "Search scientific literature (OpenAlex + arXiv) for a research topic. Call this for every substantive question by default, not only when the user explicitly asks for papers or sources — never invent citations yourself.",
   input_schema: {
     type: "object",
     properties: {
