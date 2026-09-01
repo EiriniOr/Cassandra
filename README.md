@@ -1,15 +1,19 @@
 # Cassandra
 
-Open-domain research assistant. Search scientific literature (OpenAlex + arXiv),
-read results as progressive-disclosure cards — one-sentence fact → grounded
-paragraph → real open-access PDF — save articles and track topics across
-visits, and get a standing library refresh every ~2 days. Password-gated,
-hosted on Vercel.
+Open-domain research assistant. Ask a question; the answer renders as a
+visual hub-and-spoke node — synthesized answer in the center, its 1-6
+supporting sources fanned out and connected on expand, each source its own
+progressive-disclosure card (one-sentence fact → grounded paragraph → real
+open-access PDF). Expanding an answer also lets you branch a follow-up
+question into a connected child node, so a topic explores as a small tree.
+Full conversation history stays reachable as a hover-reveal panel behind the
+input bar. Save articles and track topics across visits, with a standing
+library refresh every ~2 days. Password-gated, hosted on Vercel.
 
-Built on CopilotKit + Next.js App Router, reusing the literature-search /
-full-text / citation logic from the DASH project (`eirini-dash`), ported to
-TypeScript and generalized from a fixed climate/planning corpus to open-topic
-live search.
+Built on Next.js App Router + the Anthropic SDK directly, reusing the
+literature-search / full-text / citation logic from the DASH project
+(`eirini-dash`), ported to TypeScript and generalized from a fixed
+climate/planning corpus to open-topic live search.
 
 ## Setup
 
@@ -45,12 +49,12 @@ it, chat and search still work; the library API routes return errors.
 ```
 Browser ──> middleware.ts (password gate, sets cassandra_uid cookie)
               │
-              ├─ /                    chat UI (CopilotKit)
-              │     └─ /api/copilotkit   CopilotRuntime + AnthropicAdapter → Claude
-              │           search_literature tool (frontend) ──> /api/research/search
-              │                                                     │
-              │                                              lib/research/*.ts
-              │                                          (search, fulltext, summarize)
+              ├─ /                    app/page.tsx — canvas UI
+              │     └─ /api/ask          Anthropic SDK direct, runs the
+              │                          tool-call loop server-side
+              │                              │
+              │                       lib/research/*.ts
+              │                   (search, fulltext, summarize)
               │
               ├─ /library             saved articles + tracked topics
               │     └─ /api/library/*     lib/library.ts (Upstash Redis)
@@ -62,9 +66,12 @@ Browser ──> middleware.ts (password gate, sets cassandra_uid cookie)
 
 - `middleware.ts` — password gate (signed `cassandra_auth` cookie) and the
   opaque `cassandra_uid` cookie that scopes the library.
-- `app/api/copilotkit/route.ts` — CopilotKit runtime, `AnthropicAdapter` talks
-  to Claude directly (no separate agent backend needed for a stateless
-  live-search tool, unlike DASH's LangGraph setup).
+- `app/api/ask/route.ts` — the model loop: one Anthropic SDK call, and if
+  Claude calls `search_literature`, executes it in-process (calling
+  `lib/research/*` directly, no HTTP round-trip) and feeds the result back for
+  a final synthesized answer. Returns `{answerText, facts, history}` per
+  question; `history` round-trips from the client so context persists across
+  turns without server-side session state.
 - `lib/research/search.ts` / `fulltext.ts` / `citations.ts` — TS ports of
   DASH's `scientific_search.py` / `fulltext.py` / `citations.py`: OpenAlex +
   arXiv search, open-access PDF resolution + text extraction (`unpdf`), and
@@ -72,9 +79,20 @@ Browser ──> middleware.ts (password gate, sets cassandra_uid cookie)
 - `lib/research/summarize.ts` — one Claude call per result producing the
   one-sentence + paragraph pair, grounded in real article text when an OA PDF
   is found.
-- `components/ArticleCard.tsx` / `ArticleGrid.tsx` — the progressive-disclosure
-  UI: a zoom control cycles sentence → paragraph → embedded PDF (only when a
-  real OA PDF was resolved — never fabricated).
+- `app/page.tsx` — owns the answer tree (`Record<id, AnswerNode>` + insertion
+  order + linear `history`), `submitQuestion()` for both root and branch
+  questions, and which node is currently focused.
+- `components/canvas/{Canvas,AnswerHub,FactSpokes,ConnectorLines,BranchComposer}.tsx`
+  — the visualization: `AnswerHub` renders the focused node (breadcrumb up to
+  its parent, answer text, expand toggle); expanding fans out `ArticleCard`s
+  as spokes with `ConnectorLines` (ref-measured SVG, not hardcoded
+  coordinates) and reveals `BranchComposer` for follow-ups.
+- `components/ArticleCard.tsx` — the progressive-disclosure source card: a
+  zoom control cycles sentence → paragraph → embedded PDF (only when a real OA
+  PDF was resolved — never fabricated).
+- `components/{BottomBar,HistoryDrawer}.tsx` — the always-visible input;
+  `HistoryDrawer` wraps it and reveals the full session as a white panel on
+  hover, each row jumping the canvas back to that node.
 - `lib/library.ts` — Upstash-Redis-backed library (saved articles, tracked
   topics, cron-discovered new finds), keyed by `cassandra_uid`.
 - `app/api/cron/refresh/route.ts` + `vercel.json` — the standing job: re-runs
@@ -84,6 +102,5 @@ Browser ──> middleware.ts (password gate, sets cassandra_uid cookie)
 ## Adding a research tool
 
 Add a new module under `lib/research/`, export plain async functions (no
-framework imports), then wire it as a `useFrontendTool` in
-`app/(app)/page.tsx` if it needs to render custom UI, or call it directly from
-an API route otherwise.
+framework imports), then wire it into the tool loop in `app/api/ask/route.ts`
+(add to the `tools` array + handle its `tool_use` block).

@@ -33,6 +33,8 @@ export function ArticleCard({ article }: { article: ArticlePresentation }) {
         body: JSON.stringify(article),
       });
       if (res.ok) setSaved(true);
+    } catch {
+      // library not configured yet (e.g. Upstash not connected) — fail quietly
     } finally {
       setSaving(false);
     }
