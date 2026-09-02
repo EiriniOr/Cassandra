@@ -3,11 +3,14 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { AnswerNode } from "@/lib/canvas/types";
+import type { ArticlePresentation } from "@/lib/research/summarize";
 import { ArticleCard } from "@/components/ArticleCard";
 import { ConnectorLines } from "@/components/canvas/ConnectorLines";
 import { BranchComposer } from "@/components/canvas/BranchComposer";
 
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 28 };
+/** Sources up to this count spread sideways in one row below the hub; beyond it, split above/below to wrap around the hub instead of stacking further down. */
+const SINGLE_ROW_CAPACITY = 4;
 
 function ancestryOf(node: AnswerNode, allNodes: Record<string, AnswerNode>): AnswerNode[] {
   const chain: AnswerNode[] = [];
@@ -17,6 +20,10 @@ function ancestryOf(node: AnswerNode, allNodes: Record<string, AnswerNode>): Ans
     current = current.parentId ? allNodes[current.parentId] : undefined;
   }
   return chain;
+}
+
+function keyFor(f: ArticlePresentation): string {
+  return `${f.source}-${f.index}-${f.doi ?? f.title}`;
 }
 
 export function AnswerHub({
@@ -31,35 +38,77 @@ export function AnswerHub({
   onBranch: (parentId: string, text: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [tracking, setTracking] = useState(false);
-  const [tracked, setTracked] = useState(false);
+  const [trackState, setTrackState] = useState<"idle" | "tracking" | "tracked" | "error">("idle");
   const containerRef = useRef<HTMLDivElement>(null);
   const hubRef = useRef<HTMLDivElement>(null);
-  const spokeRefs = useRef<(HTMLElement | null)[]>([]);
+  const belowRefs = useRef<(HTMLElement | null)[]>([]);
+  const aboveRefs = useRef<(HTMLElement | null)[]>([]);
 
   const pending = node.answerText === null;
   const hasFacts = node.facts.length > 0;
   const ancestry = ancestryOf(node, allNodes);
 
+  const overflow = node.facts.length > SINGLE_ROW_CAPACITY;
+  const belowFacts = overflow ? node.facts.slice(0, Math.ceil(node.facts.length / 2)) : node.facts;
+  const aboveFacts = overflow ? node.facts.slice(Math.ceil(node.facts.length / 2)) : [];
+
   async function handleTrack() {
-    setTracking(true);
+    setTrackState("tracking");
     try {
       const res = await fetch("/api/library/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: node.question }),
       });
-      if (res.ok) setTracked(true);
+      setTrackState(res.ok ? "tracked" : "error");
     } catch {
-      // library not configured yet (e.g. Upstash not connected) — fail quietly
-    } finally {
-      setTracking(false);
+      setTrackState("error");
     }
   }
 
+  const trackLabel = {
+    idle: "Track this topic",
+    tracking: "Tracking…",
+    tracked: "Tracking topic ✓",
+    error: "Couldn't track — retry",
+  }[trackState];
+
   return (
     <div className="hub-spoke-container" ref={containerRef}>
-      <ConnectorLines containerRef={containerRef} hubRef={hubRef} spokeRefs={spokeRefs} active={expanded && hasFacts} />
+      <ConnectorLines
+        containerRef={containerRef}
+        hubRef={hubRef}
+        belowRefs={belowRefs}
+        aboveRefs={aboveRefs}
+        active={expanded && hasFacts}
+      />
+
+      <AnimatePresence>
+        {expanded && aboveFacts.length > 0 && (
+          <motion.div
+            className="fact-spokes fact-spokes--above"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {aboveFacts.map((f, i) => (
+              <motion.div
+                key={keyFor(f)}
+                className="fact-spoke"
+                ref={(el) => {
+                  aboveRefs.current[i] = el;
+                }}
+                initial={{ opacity: 0, y: 16, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.94 }}
+                transition={{ ...SPRING, delay: i * 0.07 }}
+              >
+                <ArticleCard article={f} />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <motion.div layout className="answer-hub" ref={hubRef} transition={SPRING}>
         {ancestry.length > 0 && (
@@ -118,11 +167,11 @@ export function AnswerHub({
               <motion.button
                 className="answer-hub__track"
                 onClick={handleTrack}
-                disabled={tracked || tracking}
+                disabled={trackState === "tracking" || trackState === "tracked"}
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.97 }}
               >
-                {tracked ? "Tracking topic ✓" : tracking ? "Tracking…" : "Track this topic"}
+                {trackLabel}
               </motion.button>
             )}
           </motion.div>
@@ -144,14 +193,14 @@ export function AnswerHub({
       </motion.div>
 
       <AnimatePresence>
-        {expanded && hasFacts && (
+        {expanded && belowFacts.length > 0 && (
           <motion.div className="fact-spokes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            {node.facts.map((f, i) => (
+            {belowFacts.map((f, i) => (
               <motion.div
-                key={`${f.source}-${f.index}-${f.doi ?? f.title}`}
+                key={keyFor(f)}
                 className="fact-spoke"
                 ref={(el) => {
-                  spokeRefs.current[i] = el;
+                  belowRefs.current[i] = el;
                 }}
                 initial={{ opacity: 0, y: -16, scale: 0.94 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}

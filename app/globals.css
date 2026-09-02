@@ -118,7 +118,7 @@ a:hover {
 
 .hub-spoke-container {
   position: relative;
-  width: min(680px, 100%);
+  width: min(960px, 100%);
 }
 
 .connector-lines {
@@ -137,6 +137,8 @@ a:hover {
 
 .answer-hub {
   position: relative;
+  max-width: 680px;
+  margin: 0 auto;
   background: var(--bg-card);
   border: 1px solid var(--violet-line);
   border-radius: 16px;
@@ -215,9 +217,14 @@ a:hover {
   gap: 1rem;
 }
 
+.fact-spokes--above {
+  margin-top: 0;
+  margin-bottom: 3.5rem;
+}
+
 .fact-spoke {
-  flex: 0 1 280px;
-  max-width: 280px;
+  flex: 0 1 220px;
+  max-width: 220px;
 }
 
 .answer-hub__branch {
