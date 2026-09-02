@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const res = await client.messages.create({
       model: MODEL,
-      max_tokens: 1500,
+      max_tokens: 350,
       system: SYSTEM_PROMPT,
       tools: [SEARCH_TOOL],
       messages,

@@ -9,15 +9,35 @@ interface Line {
   y2: number;
 }
 
+function linesFor(
+  containerRect: DOMRect,
+  hubRect: DOMRect,
+  refs: (HTMLElement | null)[],
+  side: "above" | "below",
+): Line[] {
+  const hubX = hubRect.left + hubRect.width / 2 - containerRect.left;
+  const hubY = side === "below" ? hubRect.bottom - containerRect.top : hubRect.top - containerRect.top;
+  const lines: Line[] = [];
+  for (const spoke of refs) {
+    if (!spoke) continue;
+    const r = spoke.getBoundingClientRect();
+    const spokeY = side === "below" ? r.top - containerRect.top : r.bottom - containerRect.top;
+    lines.push({ x1: hubX, y1: hubY, x2: r.left + r.width / 2 - containerRect.left, y2: spokeY });
+  }
+  return lines;
+}
+
 export function ConnectorLines({
   containerRef,
   hubRef,
-  spokeRefs,
+  belowRefs,
+  aboveRefs,
   active,
 }: {
   containerRef: RefObject<HTMLElement | null>;
   hubRef: RefObject<HTMLElement | null>;
-  spokeRefs: RefObject<(HTMLElement | null)[]>;
+  belowRefs: RefObject<(HTMLElement | null)[]>;
+  aboveRefs: RefObject<(HTMLElement | null)[]>;
   active: boolean;
 }) {
   const [lines, setLines] = useState<Line[]>([]);
@@ -32,31 +52,18 @@ export function ConnectorLines({
       const container = containerRef.current;
       const hub = hubRef.current;
       if (!container || !hub) return;
-
       const containerRect = container.getBoundingClientRect();
       const hubRect = hub.getBoundingClientRect();
-      const hubX = hubRect.left + hubRect.width / 2 - containerRect.left;
-      const hubY = hubRect.bottom - containerRect.top;
-
-      const next: Line[] = [];
-      for (const spoke of spokeRefs.current ?? []) {
-        if (!spoke) continue;
-        const r = spoke.getBoundingClientRect();
-        next.push({
-          x1: hubX,
-          y1: hubY,
-          x2: r.left + r.width / 2 - containerRect.left,
-          y2: r.top - containerRect.top,
-        });
-      }
-      setLines(next);
+      const below = linesFor(containerRect, hubRect, belowRefs.current ?? [], "below");
+      const above = linesFor(containerRect, hubRect, aboveRefs.current ?? [], "above");
+      setLines([...above, ...below]);
     }
 
     measure();
     const observer = new ResizeObserver(measure);
     if (containerRef.current) observer.observe(containerRef.current);
     if (hubRef.current) observer.observe(hubRef.current);
-    for (const spoke of spokeRefs.current ?? []) {
+    for (const spoke of [...(belowRefs.current ?? []), ...(aboveRefs.current ?? [])]) {
       if (spoke) observer.observe(spoke);
     }
     window.addEventListener("resize", measure);
