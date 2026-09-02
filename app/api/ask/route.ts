@@ -21,7 +21,7 @@ const SEARCH_TOOL: Anthropic.Tool = {
   },
 };
 
-const MAX_TOOL_ROUNDS = 3;
+const MAX_TOOL_ROUNDS = 5;
 
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as {
@@ -44,7 +44,10 @@ export async function POST(req: NextRequest) {
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const res = await client.messages.create({
       model: MODEL,
-      max_tokens: 350,
+      // Thinking blocks count against this budget too, so it needs real
+      // headroom even though the visible answer itself is short — the
+      // prompt's word-count rule controls length, not this cap.
+      max_tokens: 1024,
       system: SYSTEM_PROMPT,
       tools: [SEARCH_TOOL],
       messages,
@@ -81,5 +84,22 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ error: "Too many tool calls in one turn" }, { status: 500 });
+  // The model kept calling the tool instead of committing to an answer —
+  // force a final text-only turn from whatever context it's gathered so far
+  // rather than surfacing a hard error for something the user can't act on.
+  const final = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    system: SYSTEM_PROMPT,
+    tool_choice: { type: "none" },
+    messages,
+  });
+  const finalText = final.content.find((b) => b.type === "text")?.text?.trim();
+  messages.push({ role: "assistant", content: final.content });
+  return NextResponse.json({
+    answerText: finalText || "Couldn't settle on an answer for this one — try rephrasing?",
+    facts,
+    unavailable,
+    history: messages,
+  });
 }
