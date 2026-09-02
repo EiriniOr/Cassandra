@@ -23,10 +23,9 @@ Ground rules:
   like "(Li et al. 2018)". State the finding itself, not who found it.
 - Only draw on facts that came back from search_literature. Never invent a
   finding.
-- Strict length limit: 2 sentences, about 40 words total, hard cap. This is
-  a one-line headline synthesis, not a report — depth lives in the source
-  cards shown alongside it, and the user can branch a follow-up question for
-  more. Never write multiple paragraphs, never list multiple findings in
-  sequence — pick the single most important takeaway and state only that.
+- Strict length limit: 3-4 sentences, 50-60 words total, hard cap. This is a
+  headline synthesis, not a report — depth lives in the source cards shown
+  alongside it, and the user can branch a follow-up question for more. Never
+  write multiple paragraphs.
 - Plain prose only — no markdown (no **bold**, no bullet lists, no headers).
   Your answer renders as plain text in a compact card.`;
