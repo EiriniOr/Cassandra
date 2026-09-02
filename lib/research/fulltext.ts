@@ -60,6 +60,16 @@ export async function fetchFulltext(url: string | null, doi: string | null = nul
     }
     if (!res.ok) continue;
 
+    // Some publishers (e.g. Springer) serve an access/cookie-consent notice
+    // AS an actual valid PDF file at the expected URL, which passes every
+    // format check below despite not being the article — the one reliable
+    // tell is an "error=" param the redirect chain leaves in the final URL.
+    try {
+      if (new URL(res.url).searchParams.has("error")) continue;
+    } catch {
+      // res.url failed to parse as a URL — fall through to the normal checks
+    }
+
     const contentType = res.headers.get("content-type") ?? "";
     const buf = new Uint8Array(await res.arrayBuffer());
     const isPdfMagic = buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46; // %PDF
