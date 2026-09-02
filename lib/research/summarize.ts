@@ -21,7 +21,7 @@ async function summarizeOne(
   paper: Paper,
   query: string,
   groundingText: string,
-): Promise<{ sentence: string; paragraph: string }> {
+): Promise<{ relevant: boolean; sentence: string; paragraph: string }> {
   const source = groundingText
     ? `Excerpt from the actual article body:\n${groundingText}`
     : `Abstract: ${paper.abstractSnippet ?? "(none available)"}`;
@@ -31,11 +31,16 @@ ${source}
 
 Research topic: "${query}"
 
-Write:
+First judge relevance: does this paper actually address the topic, or does it
+just share keywords while covering something else (or only mention the topic
+in passing)? Be strict — if it's tangential, mark it not relevant.
+
+If relevant, write:
 1. "sentence": one factual sentence (<= 25 words) stating the paper's single most relevant finding for this topic.
 2. "paragraph": a 3-5 sentence paragraph expanding on it, grounded ONLY in the text above — no claims beyond it.
+If not relevant, leave "sentence" and "paragraph" as empty strings.
 
-Respond with ONLY compact JSON: {"sentence": "...", "paragraph": "..."}`;
+Respond with ONLY compact JSON: {"relevant": true|false, "sentence": "...", "paragraph": "..."}`;
 
   const res = await client.messages.create({
     model: SUMMARY_MODEL,
@@ -47,12 +52,14 @@ Respond with ONLY compact JSON: {"sentence": "...", "paragraph": "..."}`;
     const jsonStart = text.indexOf("{");
     const jsonEnd = text.lastIndexOf("}");
     const parsed = JSON.parse(text.slice(jsonStart, jsonEnd + 1));
+    const sentence = String(parsed.sentence ?? "").trim() || paper.title;
     return {
-      sentence: String(parsed.sentence ?? "").trim() || paper.title,
-      paragraph: String(parsed.paragraph ?? "").trim() || paper.abstractSnippet || "",
+      relevant: parsed.relevant !== false,
+      sentence,
+      paragraph: String(parsed.paragraph ?? "").trim() || paper.abstractSnippet || sentence,
     };
   } catch {
-    return { sentence: paper.title, paragraph: paper.abstractSnippet ?? "" };
+    return { relevant: true, sentence: paper.title, paragraph: paper.abstractSnippet ?? "" };
   }
 }
 
@@ -60,12 +67,14 @@ export async function summarizeResults(
   papers: Paper[],
   query: string,
 ): Promise<ArticlePresentation[]> {
-  return Promise.all(
+  const presented = await Promise.all(
     papers.map(async (paper) => {
       const { text: fulltext, pdfUrl } = await fetchFulltext(paper.url, paper.doi);
       const grounding = fulltext ? relevantPassages(fulltext, query, 3).join("\n\n") : "";
-      const { sentence, paragraph } = await summarizeOne(paper, query, grounding);
+      const { relevant, sentence, paragraph } = await summarizeOne(paper, query, grounding);
+      if (!relevant) return null;
       return { ...paper, sentence, paragraph, pdfUrl };
     }),
   );
+  return presented.filter((a): a is ArticlePresentation => a !== null);
 }
