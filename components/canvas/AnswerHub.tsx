@@ -7,6 +7,8 @@ import { ArticleCard } from "@/components/ArticleCard";
 import { ConnectorLines } from "@/components/canvas/ConnectorLines";
 import { BranchComposer } from "@/components/canvas/BranchComposer";
 
+const SPRING = { type: "spring" as const, stiffness: 300, damping: 28 };
+
 function ancestryOf(node: AnswerNode, allNodes: Record<string, AnswerNode>): AnswerNode[] {
   const chain: AnswerNode[] = [];
   let current = node.parentId ? allNodes[node.parentId] : undefined;
@@ -59,12 +61,14 @@ export function AnswerHub({
     <div className="hub-spoke-container" ref={containerRef}>
       <ConnectorLines containerRef={containerRef} hubRef={hubRef} spokeRefs={spokeRefs} active={expanded && hasFacts} />
 
-      <div className="answer-hub" ref={hubRef}>
+      <motion.div layout className="answer-hub" ref={hubRef} transition={SPRING}>
         {ancestry.length > 0 && (
           <div className="answer-hub__breadcrumb">
             {ancestry.map((a) => (
               <span key={a.id}>
-                <button onClick={() => onNavigate(a.id)}>{a.question}</button>
+                <motion.button whileHover={{ x: -2 }} onClick={() => onNavigate(a.id)}>
+                  {a.question}
+                </motion.button>
                 <span className="answer-hub__breadcrumb-sep">›</span>
               </span>
             ))}
@@ -72,34 +76,72 @@ export function AnswerHub({
         )}
 
         <div className="answer-hub__question">{node.question}</div>
-        {pending ? (
-          <div className="answer-hub__pending">Thinking…</div>
-        ) : (
-          <div className="answer-hub__text">{node.answerText}</div>
-        )}
+        <AnimatePresence mode="wait">
+          {pending ? (
+            <motion.div
+              key="pending"
+              className="answer-hub__pending"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              Thinking…
+            </motion.div>
+          ) : (
+            <motion.div
+              key="text"
+              className="answer-hub__text"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={SPRING}
+            >
+              {node.answerText}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {!pending && (
-          <div className="answer-hub__row">
-            <button className="answer-hub__toggle" onClick={() => setExpanded((e) => !e)}>
+          <motion.div layout className="answer-hub__row">
+            <motion.button
+              className="answer-hub__toggle"
+              onClick={() => setExpanded((e) => !e)}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+            >
               {expanded
                 ? "Collapse"
                 : hasFacts
                   ? `Show ${node.facts.length} source${node.facts.length > 1 ? "s" : ""}`
                   : "Discuss further"}
-            </button>
+            </motion.button>
             {hasFacts && (
-              <button className="answer-hub__track" onClick={handleTrack} disabled={tracked || tracking}>
+              <motion.button
+                className="answer-hub__track"
+                onClick={handleTrack}
+                disabled={tracked || tracking}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
+              >
                 {tracked ? "Tracking topic ✓" : tracking ? "Tracking…" : "Track this topic"}
-              </button>
+              </motion.button>
             )}
-          </div>
+          </motion.div>
         )}
 
-        {expanded && (
-          <div className="answer-hub__branch">
-            <BranchComposer onSubmit={(text) => onBranch(node.id, text)} />
-          </div>
-        )}
-      </div>
+        <AnimatePresence>
+          {expanded && (
+            <motion.div
+              className="answer-hub__branch"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={SPRING}
+            >
+              <BranchComposer onSubmit={(text) => onBranch(node.id, text)} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
       <AnimatePresence>
         {expanded && hasFacts && (
@@ -111,9 +153,10 @@ export function AnswerHub({
                 ref={(el) => {
                   spokeRefs.current[i] = el;
                 }}
-                initial={{ opacity: 0, y: -12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06 }}
+                initial={{ opacity: 0, y: -16, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.94 }}
+                transition={{ ...SPRING, delay: i * 0.07 }}
               >
                 <ArticleCard article={f} />
               </motion.div>
@@ -128,9 +171,15 @@ export function AnswerHub({
             const child = allNodes[childId];
             if (!child) return null;
             return (
-              <button key={childId} className="answer-hub__child-pill" onClick={() => onNavigate(childId)}>
+              <motion.button
+                key={childId}
+                className="answer-hub__child-pill"
+                onClick={() => onNavigate(childId)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.96 }}
+              >
                 {child.question}
-              </button>
+              </motion.button>
             );
           })}
         </div>

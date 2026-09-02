@@ -18,6 +18,9 @@ function zoomTitle(zoom: Zoom, hasPdf: boolean): string {
   return "Collapse";
 }
 
+const CARD_SPRING = { type: "spring" as const, stiffness: 300, damping: 30 };
+const FADE = { duration: 0.14, ease: "easeOut" as const };
+
 export function ArticleCard({ article }: { article: ArticlePresentation }) {
   const [zoom, setZoom] = useState<Zoom>("sentence");
   const [saved, setSaved] = useState(false);
@@ -41,25 +44,20 @@ export function ArticleCard({ article }: { article: ArticlePresentation }) {
   }
 
   return (
-    <div className={`article-card article-card--${zoom}`}>
-      <button
+    <motion.div layout className={`article-card article-card--${zoom}`} transition={CARD_SPRING}>
+      <motion.button
         className="article-card__zoom"
         onClick={() => setZoom((z) => nextZoom(z, hasPdf))}
         title={zoomTitle(zoom, hasPdf)}
         aria-label={zoomTitle(zoom, hasPdf)}
+        whileHover={{ scale: 1.12 }}
+        whileTap={{ scale: 0.92 }}
       >
         {zoom === "pdf" ? "−" : "+"}
-      </button>
+      </motion.button>
 
       <div className="article-card__body">
-        <div className="article-card__meta">
-          <span className="article-card__source">{article.source === "arxiv" ? "arXiv" : "OpenAlex"}</span>
-          <span className="article-card__year">{article.year ?? "n.d."}</span>
-        </div>
-        <div className="article-card__title">{article.title}</div>
-        <div className="article-card__authors">{article.authors.slice(0, 3).join(", ") || "Unknown authors"}</div>
-
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence mode="popLayout" initial={false}>
           {zoom === "sentence" && (
             <motion.p
               key="sentence"
@@ -67,32 +65,23 @@ export function ArticleCard({ article }: { article: ArticlePresentation }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={FADE}
             >
               {article.sentence}
             </motion.p>
           )}
 
           {zoom === "paragraph" && (
-            <motion.div
+            <motion.p
               key="paragraph"
               className="article-card__paragraph"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={FADE}
             >
-              <p>{article.paragraph}</p>
-              <div className="article-card__actions">
-                {article.url && (
-                  <a href={article.url} target="_blank" rel="noreferrer">
-                    Source ↗
-                  </a>
-                )}
-                <button className="article-card__save" onClick={handleSave} disabled={saved || saving}>
-                  {saved ? "Saved" : saving ? "Saving…" : "Save"}
-                </button>
-                {!hasPdf && <span className="article-card__not-oa">Not open access — no full text available</span>}
-              </div>
-            </motion.div>
+              {article.paragraph}
+            </motion.p>
           )}
 
           {zoom === "pdf" && article.pdfUrl && (
@@ -102,12 +91,36 @@ export function ArticleCard({ article }: { article: ArticlePresentation }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={FADE}
             >
               <iframe src={article.pdfUrl} title={article.title} />
             </motion.div>
           )}
         </AnimatePresence>
+
+        <div className="article-card__source">
+          {article.url ? (
+            <a className="article-card__source-title" href={article.url} target="_blank" rel="noreferrer">
+              {article.title}
+            </a>
+          ) : (
+            <span className="article-card__source-title">{article.title}</span>
+          )}
+          <div className="article-card__source-meta">
+            <span>{article.authors.slice(0, 2).join(", ") || "Unknown authors"}</span>
+            <span aria-hidden="true">·</span>
+            <span>{article.year ?? "n.d."}</span>
+            <span aria-hidden="true">·</span>
+            <span>{article.source === "arxiv" ? "arXiv" : "OpenAlex"}</span>
+            <button className="article-card__save" onClick={handleSave} disabled={saved || saving}>
+              {saved ? "Saved" : saving ? "Saving…" : "Save"}
+            </button>
+          </div>
+          {zoom !== "sentence" && !hasPdf && (
+            <span className="article-card__not-oa">Not open access — no full text available</span>
+          )}
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
