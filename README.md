@@ -40,7 +40,7 @@ it, chat and search still work; the library API routes return errors.
 | `SITE_PASSWORD` | Password gate for the whole site |
 | `AUTH_SECRET` | Signs the session cookie (`openssl rand -hex 32`) |
 | `CRON_SECRET` | Verifies Vercel Cron's calls to `/api/cron/refresh` |
-| `CASSANDRA_MODEL` | Optional, overrides the default chat model (`claude-fable-5`) |
+| `CASSANDRA_MODEL` | Optional, overrides the default chat model (`claude-haiku-4-5`, cheapest tier) |
 | `CASSANDRA_FAST_MODEL` | Optional, overrides the summarizer model (`claude-haiku-4-5`) |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Set automatically by the Vercel Upstash integration |
 
