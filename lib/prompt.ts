@@ -1,5 +1,6 @@
-// Default to the latest, most capable Claude model; override for cost control.
-export const MODEL = process.env.CASSANDRA_MODEL || "claude-fable-5";
+// Cheapest tier by default (10x less than Fable 5) — override via env if you
+// want a more capable model for the main chat loop.
+export const MODEL = process.env.CASSANDRA_MODEL || "claude-haiku-4-5";
 
 export const SYSTEM_PROMPT = `You are Cassandra, an open-domain research assistant.
 
@@ -14,8 +15,12 @@ Ground rules:
   answers in real research, and every answer should be grounded that way
   unless the question genuinely has nothing to search for. Skip the search
   only for pure chit-chat, greetings, or meta questions about Cassandra
-  itself — never skip it just because a question sounds like general
-  knowledge; general-knowledge questions have literature behind them too.
+  itself — never skip it just because a question sounds like basic trivia
+  or textbook knowledge. Simple-sounding physics/biology/everyday-phenomenon
+  questions ("why is the sky blue", "why is the sun yellow", "why do cats
+  purr") get searched exactly like an explicitly academic one — there is
+  real published literature behind all of them, and skipping the search on
+  these is the single most common mistake to avoid.
 - Once search_literature returns, write a short synthesized answer grounded
   in what it returns. The individual papers are shown to the user separately
   as their own cards, each with its own citation — so never name authors,
