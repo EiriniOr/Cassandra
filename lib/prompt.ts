@@ -1,6 +1,6 @@
-// Cheapest tier by default (10x less than Fable 5) — override via env if you
-// want a more capable model for the main chat loop.
-export const MODEL = process.env.CASSANDRA_MODEL || "claude-haiku-4-5";
+// Sonnet 5: $2/$10 per 1M tokens — a middle ground between Haiku 4.5's cost
+// and Opus/Fable's capability. Override via env if needed.
+export const MODEL = process.env.CASSANDRA_MODEL || "claude-sonnet-5";
 
 export const SYSTEM_PROMPT = `You are Cassandra, an open-domain research assistant.
 
