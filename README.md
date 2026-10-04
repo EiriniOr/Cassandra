@@ -1,5 +1,7 @@
 # Cassandra
 
+> 📁 Part of my portfolio: [see this project and more →](https://eirini-portfolio-aer3.vercel.app/?utm_source=github&utm_medium=readme&utm_campaign=Cassandra#story/cassandra)
+
 Open-domain research assistant. Ask a question; the answer renders as a
 visual hub-and-spoke node — synthesized answer in the center, its 1-6
 supporting sources fanned out and connected on expand, each source its own
